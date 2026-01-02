@@ -6,7 +6,7 @@ A provably fair, verifiably random lottery smart contract written in Solidity.
 
 To set up the project, create a `.env` file in the root directory and add the following environment variables:
 
-```bash
+```
 SEPOLIA_RPC_URL=<sepolia_rpc_url>
 PRIVATE_KEY=<private_key>
 ETHERSCAN_API_KEY=<etherscan_api_key>

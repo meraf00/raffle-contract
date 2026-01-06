@@ -124,6 +124,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
         address payable winner = s_players[randomWords[0] % nPlayers];
         uint256 prizeAmount = (nPlayers - 1) * i_entranceFee;
 
+        if (prizeAmount <= 0 || nPlayers <= 0) {
+            revert Raffle__NoPlayers();
+        }
+
         s_raffleState = RaffleState.OPEN;
         s_players = new address payable[](0);
         s_lastTimestamp = block.timestamp;
@@ -143,5 +147,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     function getRaffleState() external view returns (RaffleState) {
         return s_raffleState;
+    }
+
+    function getPlayer(uint256 index) external view returns (address) {
+        return s_players[index];
     }
 }

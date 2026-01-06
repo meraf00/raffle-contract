@@ -6,6 +6,8 @@ import {Test, console} from "forge-std/Test.sol";
 import {Raffle} from "../../src/Raffle.sol";
 import {DeployRaffle} from "../../script/DeployRaffle.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {Vm} from "forge-std/Vm.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
 contract RaffleTest is Test {
     Raffle raffle;
@@ -58,13 +60,7 @@ contract RaffleTest is Test {
         raffle.enter();
     }
 
-    function test_EnterRaffleRevertsWhenGameIsClosed() public {
-        vm.prank(player);
-        raffle.enter{value: entranceFee}();
-        vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 1);
-        raffle.performUpkeep("");
-
+    function test_EnterRaffleRevertsWhenGameIsClosed() public runSingleRound {
         vm.expectRevert(Raffle.Raffle__GameNotOpen.selector);
         vm.prank(player);
         raffle.enter{value: entranceFee}();
@@ -85,5 +81,117 @@ contract RaffleTest is Test {
         emit Raffle.PlayerEntered(player);
 
         raffle.enter{value: entranceFee}();
+    }
+
+    // Test Group
+    // Check upkeep
+    function test_CheckUpkeepReturnsFalseIfItHasNoBalance() public {
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+
+        (bool upkeepNeeded, ) = raffle.checkUpkeep("");
+
+        assert(!upkeepNeeded);
+    }
+
+    function test_CheckUpkeepReturnsFalseIfRaffleNotOpen()
+        public
+        runSingleRound
+    {
+        vm.prank(player);
+        (bool upkeepNeeded, ) = raffle.checkUpkeep("");
+
+        assert(!upkeepNeeded);
+    }
+
+    function test_CheckUpkeepReturnsFalseIfEnoughTimeHasntPassed() public {
+        vm.prank(player);
+        raffle.enter{value: entranceFee}();
+
+        (bool upkeepNeeded, ) = raffle.checkUpkeep("");
+
+        assert(!upkeepNeeded);
+    }
+
+    function test_CheckUpkeepReturnsTrueWhenParamsAreGood() public {
+        vm.prank(player);
+        raffle.enter{value: entranceFee}();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+
+        (bool upkeepNeeded, ) = raffle.checkUpkeep("");
+
+        assert(upkeepNeeded);
+    }
+
+    // Test Group
+    // Perform Upkeep
+    function test_PerformUpkeepRunsOnlyWhenCheckUpkeepReturnsTrue()
+        public
+        runSingleRound
+    {}
+
+    function test_PerformUpkeepRevertsWhenCheckUpkeepReturnsFalse() public {
+        uint256 currentBalance = 0;
+        uint256 currentPlayers = 0;
+
+        bytes memory upkeepNotNeededError = abi.encodeWithSelector(
+            Raffle.Raffle__UpkeepNotNeeded.selector,
+            currentBalance,
+            currentPlayers,
+            Raffle.RaffleState.OPEN
+        );
+        vm.expectRevert(upkeepNotNeededError);
+        raffle.performUpkeep("");
+    }
+
+    function test_PerformUpkeepUpdatesRaffleState() public enterRaffle {
+        vm.recordLogs();
+        raffle.performUpkeep("");
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        (
+            uint256 requestId,
+            uint256 preSeed,
+            uint16 minConfirmations,
+            uint32 callbackGasLimit,
+            uint32 numWords,
+            bytes memory extraArgs
+        ) = abi.decode(
+                entries[0].data,
+                (uint256, uint256, uint16, uint32, uint32, bytes)
+            );
+
+        assert(Raffle.RaffleState.CLOSE == raffle.getRaffleState());
+        assert(uint256(requestId) > 0);
+    }
+
+    function test_FulfillRandomWordsIsCalledAfterPerformUpkeep(
+        uint256 randomRequestId
+    ) public enterRaffle {
+        vm.expectRevert();
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
+            randomRequestId,
+            address(raffle)
+        );
+    }
+
+    // Helpers
+    function _enterRaffle() public {
+        vm.prank(player);
+        raffle.enter{value: entranceFee}();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+    }
+
+    modifier enterRaffle() {
+        _enterRaffle();
+        _;
+    }
+
+    modifier runSingleRound() {
+        _enterRaffle();
+        raffle.performUpkeep("");
+        _;
     }
 }

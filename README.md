@@ -8,7 +8,9 @@ To set up the project, create a `.env` file in the root directory and add the fo
 
 ```
 SEPOLIA_RPC_URL=<sepolia_rpc_url>
-PRIVATE_KEY=<private_key>
+SEPOLIA_PRIVATE_KEY=<sepolia_private_key>
+SUBSCRIPTION_ID=<subscription_id>
+ANVIL_PRIVATE_KEY=<anvil_private_key>
 ETHERSCAN_API_KEY=<etherscan_api_key>
 ```
 
@@ -46,5 +48,5 @@ make test ARGS="--network sepolia"
 
 ## Tech Stack
 
-- **[Solidity](https://docs.soliditylang.org/)** – Smart contract programming language
-- **[Foundry](https://book.getfoundry.sh/)** – Development framework for building, testing, and deploying smart contracts
+- **[Solidity](https://docs.soliditylang.org/)**: Smart contract programming language
+- **[Foundry](https://book.getfoundry.sh/)**: Development framework for building, testing, and deploying smart contracts

@@ -11,9 +11,10 @@ contract Subscription is Script {
     uint96 public constant FUND_AMOUNT = 20 ether;
 
     function createSubscription(
-        address vrfCoordinator
+        address vrfCoordinator,
+        uint256 deployerKey
     ) public returns (uint256) {
-        vm.startBroadcast();
+        vm.startBroadcast(deployerKey);
         uint256 subId = VRFCoordinatorV2_5Mock(vrfCoordinator)
             .createSubscription();
         vm.stopBroadcast();
@@ -23,10 +24,11 @@ contract Subscription is Script {
     function fundSubscription(
         address vrfCoordinator,
         uint256 subId,
-        address link
+        address link,
+        uint256 deployerKey
     ) public {
         if (block.chainid == SEPOLIA_CHAIN_ID) {
-            vm.stopBroadcast();
+            vm.startBroadcast(deployerKey);
             LinkToken(link).transferAndCall(
                 vrfCoordinator,
                 FUND_AMOUNT,
@@ -34,7 +36,7 @@ contract Subscription is Script {
             );
             vm.stopBroadcast();
         } else {
-            vm.startBroadcast();
+            vm.startBroadcast(deployerKey);
             VRFCoordinatorV2_5Mock(vrfCoordinator).fundSubscription(
                 subId,
                 FUND_AMOUNT
@@ -46,20 +48,29 @@ contract Subscription is Script {
     function addConsumer(
         address vrfCoordinator,
         uint256 subId,
-        address consumer
+        address consumer,
+        uint256 deployerKey
     ) public {
-        vm.startBroadcast();
+        vm.startBroadcast(deployerKey);
         VRFCoordinatorV2_5Mock(vrfCoordinator).addConsumer(subId, consumer);
         vm.stopBroadcast();
     }
 
     function run() external returns (uint256) {
         HelperConfig helperConfig = new HelperConfig();
-        (, , address vrfCoordinator, , , , address link) = helperConfig
-            .activeNetworkConfig();
+        (
+            ,
+            ,
+            address vrfCoordinator,
+            ,
+            ,
+            ,
+            address link,
+            uint256 deployerKey
+        ) = helperConfig.activeNetworkConfig();
 
-        uint256 subId = createSubscription(vrfCoordinator);
-        fundSubscription(vrfCoordinator, subId, link);
+        uint256 subId = createSubscription(vrfCoordinator, deployerKey);
+        fundSubscription(vrfCoordinator, subId, link, deployerKey);
 
         return subId;
     }

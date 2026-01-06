@@ -20,6 +20,7 @@ contract HelperConfig is Script {
         uint256 subscriptionId;
         uint32 callbackGasLimit;
         address link;
+        uint256 deployerKey;
     }
 
     NetworkConfig public activeNetworkConfig;
@@ -32,16 +33,17 @@ contract HelperConfig is Script {
         }
     }
 
-    function getSepoliaEthConfig() public pure returns (NetworkConfig memory) {
+    function getSepoliaEthConfig() public view returns (NetworkConfig memory) {
         return
             NetworkConfig({
                 entranceFee: 0.01 ether,
                 interval: 30,
                 vrfCoordinator: SEPOLIA_CHAIN_VRF_COORDINATOR,
                 gasLane: SEPOLIA_CHAIN_GAS_LANE_KEY_HASH,
-                subscriptionId: 0,
+                subscriptionId: vm.envUint("SUBSCRIPTION_ID"),
                 callbackGasLimit: 150_000,
-                link: SEPOLIA_CHAIN_LINK_TOKEN_CONTRACT
+                link: SEPOLIA_CHAIN_LINK_TOKEN_CONTRACT,
+                deployerKey: vm.envUint("SEPOLIA_PRIVATE_KEY")
             });
     }
 
@@ -71,7 +73,8 @@ contract HelperConfig is Script {
                 gasLane: 0x0,
                 subscriptionId: 0,
                 callbackGasLimit: 150_000,
-                link: address(linkToken)
+                link: address(linkToken),
+                deployerKey: vm.envUint("ANVIL_PRIVATE_KEY")
             });
     }
 }

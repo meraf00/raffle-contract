@@ -3,9 +3,10 @@
 pragma solidity ^0.8.33;
 
 import {Script} from "forge-std/Script.sol";
-import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
+import {VRFDeterministicCoordinatorV2_5Mock} from "../test/mocks/VRFDeterministicMock.sol";
 import {HelperConfig, SEPOLIA_CHAIN_ID} from "./HelperConfig.s.sol";
 import {LinkToken} from "../test/mocks/LinkTokenMock.sol";
+import {DeployVRF} from "./DeployVRF.s.sol";
 
 contract Subscription is Script {
     uint96 public constant FUND_AMOUNT = 20 ether;
@@ -14,9 +15,15 @@ contract Subscription is Script {
         address vrfCoordinator,
         uint256 deployerKey
     ) public returns (uint256) {
+        uint256 subId = 0;
         vm.startBroadcast(deployerKey);
-        uint256 subId = VRFCoordinatorV2_5Mock(vrfCoordinator)
-            .createSubscription();
+        if (block.chainid == SEPOLIA_CHAIN_ID) {
+            subId = VRFDeterministicCoordinatorV2_5Mock(vrfCoordinator)
+                .createSubscription();
+        } else {
+            subId = VRFDeterministicCoordinatorV2_5Mock(vrfCoordinator)
+                .deterministicCreateSubscription();
+        }
         vm.stopBroadcast();
         return subId;
     }
@@ -37,10 +44,8 @@ contract Subscription is Script {
             vm.stopBroadcast();
         } else {
             vm.startBroadcast(deployerKey);
-            VRFCoordinatorV2_5Mock(vrfCoordinator).fundSubscription(
-                subId,
-                FUND_AMOUNT
-            );
+            VRFDeterministicCoordinatorV2_5Mock(vrfCoordinator)
+                .fundSubscription(subId, FUND_AMOUNT);
             vm.stopBroadcast();
         }
     }
@@ -52,22 +57,20 @@ contract Subscription is Script {
         uint256 deployerKey
     ) public {
         vm.startBroadcast(deployerKey);
-        VRFCoordinatorV2_5Mock(vrfCoordinator).addConsumer(subId, consumer);
+        VRFDeterministicCoordinatorV2_5Mock(vrfCoordinator).addConsumer(
+            subId,
+            consumer
+        );
         vm.stopBroadcast();
     }
 
     function run() external returns (uint256) {
         HelperConfig helperConfig = new HelperConfig();
-        (
-            ,
-            ,
-            address vrfCoordinator,
-            ,
-            ,
-            ,
-            address link,
-            uint256 deployerKey
-        ) = helperConfig.activeNetworkConfig();
+        (, , , , , , , uint256 deployerKey) = helperConfig
+            .activeNetworkConfig();
+
+        DeployVRF deployVRF = new DeployVRF();
+        (address vrfCoordinator, address link) = deployVRF.run();
 
         uint256 subId = createSubscription(vrfCoordinator, deployerKey);
         fundSubscription(vrfCoordinator, subId, link, deployerKey);

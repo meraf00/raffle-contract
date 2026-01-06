@@ -3,8 +3,6 @@
 pragma solidity 0.8.33;
 
 import {Script} from "forge-std/Script.sol";
-import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
-import {LinkToken} from "../test/mocks/LinkTokenMock.sol";
 
 uint256 constant SEPOLIA_CHAIN_ID = 11155111;
 address constant SEPOLIA_CHAIN_VRF_COORDINATOR = 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B;
@@ -52,28 +50,15 @@ contract HelperConfig is Script {
             return activeNetworkConfig;
         }
 
-        uint96 baseFee = 0.25 ether; // 0.25 LINK
-        uint96 gasPriceLink = 1e9; // 1 gwei LINK
-        int256 weiPerUnitLink = 2e18;
-
-        vm.startBroadcast();
-        VRFCoordinatorV2_5Mock vrfCoordinator = new VRFCoordinatorV2_5Mock(
-            baseFee,
-            gasPriceLink,
-            weiPerUnitLink
-        );
-        LinkToken linkToken = new LinkToken();
-        vm.stopBroadcast();
-
         return
             NetworkConfig({
                 entranceFee: 0.01 ether,
                 interval: 30,
-                vrfCoordinator: address(vrfCoordinator),
+                vrfCoordinator: vm.envAddress("VRF_COORDINATOR_ADDRESS"),
                 gasLane: 0x0,
                 subscriptionId: 0,
                 callbackGasLimit: 150_000,
-                link: address(linkToken),
+                link: vm.envAddress("LINK_CONTRACT_ADDRESS"),
                 deployerKey: vm.envUint("ANVIL_PRIVATE_KEY")
             });
     }
